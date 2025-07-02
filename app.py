@@ -189,9 +189,9 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             possible_matches_df = pd.DataFrame(possible_matches)
             st.subheader("🔍 Possible Matches Based on Qty & Price:")
             st.dataframe(possible_matches_df, use_container_width=True)
-            possible_match_lines = set(possible_matches_df["Estimate Line #"])
+            possible_match_parts = set(possible_matches_df["Est Part #"])
         else:
-            possible_match_lines = set()
+            possible_match_parts = set()
             st.info("No possible matches found based on qty & price.")
 
         # 📧 Estimator email
@@ -199,7 +199,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             (match_df["Match Report"] == "❌ Missing in Estimate") &
             (~match_df["Description"].str.contains("RFC", case=False, na=False))
         ]
-        missing_estimate_lines = missing_estimate_lines[~missing_estimate_lines["Estimate Line #"].isin(possible_match_lines)]
+        missing_estimate_lines = missing_estimate_lines[~missing_estimate_lines["Part Number"].isin(possible_match_parts)]
 
         if not missing_estimate_lines.empty:
             first_email = (
@@ -220,7 +220,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             (match_df["Description"].str.contains("RFC", case=False, na=False)) &
             (match_df["Match Report"] == "❌ Missing in Estimate")
         ]
-        rfc_lines = rfc_lines[~rfc_lines["Estimate Line #"].isin(possible_match_lines)]
+        rfc_lines = rfc_lines[~rfc_lines["Part Number"].isin(possible_match_parts)]
 
         if not rfc_lines.empty:
             second_email += "Can we get these taken off of the ticket please:\n\n"
@@ -232,7 +232,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         second_email += "\n\n\n"
 
         missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
-        missing_cdk_lines = missing_cdk_lines[~missing_cdk_lines["Estimate Line #"].isin(possible_match_lines)]
+        missing_cdk_lines = missing_cdk_lines[~missing_cdk_lines["Part Number"].isin(possible_match_parts)]
 
         if not missing_cdk_lines.empty:
             second_email += (
