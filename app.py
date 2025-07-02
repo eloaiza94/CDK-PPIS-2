@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import re
+from fpdf import FPDF
+from io import BytesIO
+import base64
 
 st.set_page_config(page_title="Estimate vs CDK Cross-Reference", layout="centered")
 
@@ -159,54 +162,39 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         csv = match_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Report as CSV", csv, "match_report.csv", "text/csv")
 
-        missing_estimate_lines = match_df[
-            (match_df["Match Report"] == "❌ Missing in Estimate") &
-            (~match_df["Description"].str.contains("RFC", case=False, na=False))
+        # ✅ Create landscape PDF report
+        pdf = FPDF(orientation="L", unit="mm", format="A4")
+        pdf.add_page()
+        pdf.set_font("Helvetica", size=10)
+        pdf.cell(0, 10, "Estimate vs CDK Match Report", ln=True, align="C")
+        pdf.ln(5)
+
+        columns = [
+            "Estimate Line #", "Part Number", "Description", "Estimate Quantity",
+            "CDK Quantity", "Estimate Price", "CDK Price", "Match Report", "Color Coded Match Report"
         ]
-        if not missing_estimate_lines.empty:
-            first_email = (
-                "Hey Deshunn can you look into these for me please they're billed out "
-                "and I want to see if they're supposed to be on the estimate:\n\n"
-            )
-            for _, row in missing_estimate_lines.iterrows():
-                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
-                first_email += (
-                    f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
-                )
-            st.subheader("📩 Email for Estimator (Missing in Estimate):")
-            st.code(first_email, language="markdown")
-        else:
-            st.info("No 'Missing in Estimate' items found for estimator email.")
+        col_widths = [20, 30, 50, 25, 25, 30, 30, 50, 50]
 
-        second_email = ""
-        rfc_lines = match_df[
-            (match_df["Description"].str.contains("RFC", case=False, na=False)) &
-            (match_df["Match Report"] == "❌ Missing in Estimate")
-        ]
-        if not rfc_lines.empty:
-            second_email += "Can we get these taken off of the ticket please:\n\n"
-            for _, row in rfc_lines.iterrows():
-                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
-                qty_str = f"{row['CDK Quantity']}" if pd.notnull(row["CDK Quantity"]) else "N/A"
-                second_email += (
-                    f"- {row['Part Number']} | {row['Description']} | {price_str} | Qty: {qty_str}\n"
-                )
+        for col_name, width in zip(columns, col_widths):
+            pdf.cell(width, 8, col_name, border=1)
+        pdf.ln()
 
-        second_email += "\n\n\n"
+        for _, row in match_df.iterrows():
+            pdf.cell(col_widths[0], 8, str(row["Estimate Line #"]), border=1)
+            pdf.cell(col_widths[1], 8, str(row["Part Number"]), border=1)
+            pdf.cell(col_widths[2], 8, str(row["Description"])[:30], border=1)
+            pdf.cell(col_widths[3], 8, str(row["Estimate Quantity"]), border=1)
+            pdf.cell(col_widths[4], 8, str(row["CDK Quantity"]), border=1)
+            pdf.cell(col_widths[5], 8, f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A", border=1)
+            pdf.cell(col_widths[6], 8, f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A", border=1)
+            pdf.cell(col_widths[7], 8, str(row["Match Report"])[:25], border=1)
+            color_text = re.sub(r"[^\x00-\x7F]", "", str(row["Color Coded Match Report"]))
+            pdf.cell(col_widths[8], 8, color_text[:25], border=1)
+            pdf.ln()
 
-        missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
-        if not missing_cdk_lines.empty:
-            second_email += (
-                "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
-            )
-            for _, row in missing_cdk_lines.iterrows():
-                price_str = f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A"
-                second_email += (
-                    f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
-                )
-
-        if second_email.strip() != "":
-            st.subheader("📩 Email for Parts Department (RFC + Missing in CDK):")
-            st.code(second_email, language="markdown")
-        else:
-            st.info("No RFC or 'Missing in CDK' items found for parts email.")
+        pdf_buffer = BytesIO()
+        pdf.output(pdf_buffer)
+        pdf_data = pdf_buffer.getvalue()
+        b64_pdf = base64.b64encode(pdf_data).decode()
+        pdf_download_link = f'<a href="data:application/pdf;base64,{b64_pdf}" download="match_report.pdf">📄 Download Match Report as PDF</a>'
+        st.markdown(pdf_download_link, unsafe_allow_html=True)
