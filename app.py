@@ -1,11 +1,11 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import re
 from fpdf import FPDF
 from io import BytesIO
 import base64
 
-st.set_page_config(page_title="Estimate vs CDK Cross-Reference", layout="centered")
+st.set_page_config(page_title="Estimate vs CDK Cross-Reference", layout="wide")  # switched to wide mode
 
 st.markdown(
     """
@@ -16,7 +16,8 @@ st.markdown(
         font-family: 'Helvetica Neue', sans-serif;
     }
     .stApp {
-        max-width: 800px;
+        max-width: 100%; /* Stretch to full page width */
+        width: 100%;
         margin: 0 auto;
         padding-top: 2rem;
     }
@@ -162,45 +163,11 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         csv = match_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Report as CSV", csv, "match_report.csv", "text/csv")
 
-        # ✅ Create possible matches report: estimate lines missing in CDK but qty+price match
-        possible_matches = []
-        for _, est_row in match_df[match_df["Match Report"] == "❌ Missing in CDK"].iterrows():
-            est_qty = est_row["Estimate Quantity"]
-            est_price = est_row["Estimate Price"]
-
-            candidates = cdk_df[
-                (cdk_df["CDK Quantity"] == est_qty) &
-                (abs(cdk_df["CDK Price"] - est_price) < 0.01)
-            ]
-            for _, cdk_row in candidates.iterrows():
-                possible_matches.append({
-                    "Estimate Line #": est_row["Estimate Line #"],
-                    "Est Part #": est_row["Part Number"],
-                    "Est Qty": est_qty,
-                    "Est Price": est_price,
-                    "Est Description": est_row["Description"],
-                    "CDK Part #": cdk_row["Part Number"],
-                    "CDK Qty": cdk_row["CDK Quantity"],
-                    "CDK Price": cdk_row["CDK Price"],
-                    "CDK Description": cdk_row["CDK Description"]
-                })
-
-        if possible_matches:
-            possible_matches_df = pd.DataFrame(possible_matches)
-            st.subheader("🔍 Possible Matches Based on Qty & Price:")
-            st.dataframe(possible_matches_df, use_container_width=True)
-            possible_match_parts = set(possible_matches_df["Est Part #"])
-        else:
-            possible_match_parts = set()
-            st.info("No possible matches found based on qty & price.")
-
         # 📧 Estimator email
         missing_estimate_lines = match_df[
             (match_df["Match Report"] == "❌ Missing in Estimate") &
             (~match_df["Description"].str.contains("RFC", case=False, na=False))
         ]
-        missing_estimate_lines = missing_estimate_lines[~missing_estimate_lines["Part Number"].isin(possible_match_parts)]
-
         if not missing_estimate_lines.empty:
             first_email = (
                 "Hey Deshunn can you look into these for me please they're billed out "
@@ -220,8 +187,6 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             (match_df["Description"].str.contains("RFC", case=False, na=False)) &
             (match_df["Match Report"] == "❌ Missing in Estimate")
         ]
-        rfc_lines = rfc_lines[~rfc_lines["Part Number"].isin(possible_match_parts)]
-
         if not rfc_lines.empty:
             second_email += "Can we get these taken off of the ticket please:\n\n"
             for _, row in rfc_lines.iterrows():
@@ -232,8 +197,6 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         second_email += "\n\n\n"
 
         missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
-        missing_cdk_lines = missing_cdk_lines[~missing_cdk_lines["Part Number"].isin(possible_match_parts)]
-
         if not missing_cdk_lines.empty:
             second_email += (
                 "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
