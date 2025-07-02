@@ -210,40 +210,32 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         else:
             st.info("No RFC or 'Missing in CDK' items found for parts email.")
 
-        # ✅ Create landscape PDF report with emojis stripped
-        pdf = FPDF(orientation="L", unit="mm", format="A4")
-        pdf.add_page()
-        pdf.set_font("Helvetica", size=10)
-        pdf.cell(0, 10, "Estimate vs CDK Match Report", ln=True, align="C")
-        pdf.ln(5)
+        # ✅ Create possible matches report: estimate lines missing in CDK but qty+price match
+        possible_matches = []
+        for _, est_row in match_df[match_df["Match Report"] == "❌ Missing in CDK"].iterrows():
+            est_qty = est_row["Estimate Quantity"]
+            est_price = est_row["Estimate Price"]
 
-        columns = [
-            "Estimate Line #", "Part Number", "Description", "Estimate Quantity",
-            "CDK Quantity", "Estimate Price", "CDK Price", "Match Report", "Color Coded Match Report"
-        ]
-        col_widths = [18, 28, 45, 20, 20, 28, 28, 48, 48]
+            candidates = cdk_df[
+                (cdk_df["CDK Quantity"] == est_qty) &
+                (abs(cdk_df["CDK Price"] - est_price) < 0.01)
+            ]
+            for _, cdk_row in candidates.iterrows():
+                possible_matches.append({
+                    "Estimate Line #": est_row["Estimate Line #"],
+                    "Est Part #": est_row["Part Number"],
+                    "Est Qty": est_qty,
+                    "Est Price": est_price,
+                    "Est Description": est_row["Description"],
+                    "CDK Part #": cdk_row["Part Number"],
+                    "CDK Qty": cdk_row["CDK Quantity"],
+                    "CDK Price": cdk_row["CDK Price"],
+                    "CDK Description": cdk_row["CDK Description"]
+                })
 
-        for col_name, width in zip(columns, col_widths):
-            pdf.cell(width, 8, col_name, border=1)
-        pdf.ln()
-
-        for _, row in match_df.iterrows():
-            pdf.cell(col_widths[0], 8, str(row["Estimate Line #"]), border=1)
-            pdf.cell(col_widths[1], 8, str(row["Part Number"]), border=1)
-            pdf.cell(col_widths[2], 8, str(row["Description"])[:25], border=1)
-            pdf.cell(col_widths[3], 8, str(row["Estimate Quantity"]), border=1)
-            pdf.cell(col_widths[4], 8, str(row["CDK Quantity"]), border=1)
-            pdf.cell(col_widths[5], 8, f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A", border=1)
-            pdf.cell(col_widths[6], 8, f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A", border=1)
-            match_report_safe = re.sub(r"[^\x00-\x7F]", "", str(row["Match Report"]))
-            pdf.cell(col_widths[7], 8, match_report_safe[:20], border=1)
-            color_text_safe = re.sub(r"[^\x00-\x7F]", "", str(row["Color Coded Match Report"]))
-            pdf.cell(col_widths[8], 8, color_text_safe[:20], border=1)
-            pdf.ln()
-
-        pdf_buffer = BytesIO()
-        pdf.output(pdf_buffer)
-        pdf_data = pdf_buffer.getvalue()
-        b64_pdf = base64.b64encode(pdf_data).decode()
-        pdf_download_link = f'<a href="data:application/pdf;base64,{b64_pdf}" download="match_report.pdf">📄 Download Match Report as PDF</a>'
-        st.markdown(pdf_download_link, unsafe_allow_html=True)
+        if possible_matches:
+            possible_matches_df = pd.DataFrame(possible_matches)
+            st.subheader("🔍 Possible Matches Based on Qty & Price:")
+            st.dataframe(possible_matches_df, use_container_width=True)
+        else:
+            st.info("No possible matches found based on qty & price.")
