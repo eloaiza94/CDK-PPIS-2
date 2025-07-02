@@ -178,4 +178,32 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             st.subheader("📩 Email for Estimator (Missing in Estimate):")
             st.code(first_email, language="markdown")
         else:
-            st.info("No 'Missing in Estima
+            st.info("No 'Missing in Estimate' items found for estimator email.")
+
+        second_email = ""
+        if not rfc_lines.empty:
+            second_email += "Can we get these taken off of the ticket please:\n\n"
+            for _, row in rfc_lines.iterrows():
+                second_email += (
+                    f"- {row['Part Number']} | {row['Description']} | "
+                    f"${row['Extended Price']:.2f} | Qty: {row['Quantity']}\n"
+                )
+
+        second_email += "\n\n\n"
+
+        missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
+        if not missing_cdk_lines.empty:
+            second_email += (
+                "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
+            )
+            for _, row in missing_cdk_lines.iterrows():
+                price_str = f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A"
+                second_email += (
+                    f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
+                )
+
+        if second_email.strip() != "":
+            st.subheader("📩 Email for Parts Department (RFC + Missing in CDK):")
+            st.code(second_email, language="markdown")
+        else:
+            st.info("No RFC or 'Missing in CDK' items found for parts email.")
