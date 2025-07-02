@@ -162,54 +162,6 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         csv = match_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Report as CSV", csv, "match_report.csv", "text/csv")
 
-        # 📧 Estimator email
-        missing_estimate_lines = match_df[
-            (match_df["Match Report"] == "❌ Missing in Estimate") &
-            (~match_df["Description"].str.contains("RFC", case=False, na=False))
-        ]
-        if not missing_estimate_lines.empty:
-            first_email = (
-                "Hey Deshunn can you look into these for me please they're billed out "
-                "and I want to see if they're supposed to be on the estimate:\n\n"
-            )
-            for _, row in missing_estimate_lines.iterrows():
-                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
-                first_email += f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
-            st.subheader("📩 Email for Estimator (Missing in Estimate):")
-            st.code(first_email, language="markdown")
-        else:
-            st.info("No 'Missing in Estimate' items found for estimator email.")
-
-        # 📧 Parts department email
-        second_email = ""
-        rfc_lines = match_df[
-            (match_df["Description"].str.contains("RFC", case=False, na=False)) &
-            (match_df["Match Report"] == "❌ Missing in Estimate")
-        ]
-        if not rfc_lines.empty:
-            second_email += "Can we get these taken off of the ticket please:\n\n"
-            for _, row in rfc_lines.iterrows():
-                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
-                qty_str = f"{row['CDK Quantity']}" if pd.notnull(row["CDK Quantity"]) else "N/A"
-                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str} | Qty: {qty_str}\n"
-
-        second_email += "\n\n\n"
-
-        missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
-        if not missing_cdk_lines.empty:
-            second_email += (
-                "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
-            )
-            for _, row in missing_cdk_lines.iterrows():
-                price_str = f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A"
-                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
-
-        if second_email.strip() != "":
-            st.subheader("📩 Email for Parts Department (RFC + Missing in CDK):")
-            st.code(second_email, language="markdown")
-        else:
-            st.info("No RFC or 'Missing in CDK' items found for parts email.")
-
         # ✅ Create possible matches report: estimate lines missing in CDK but qty+price match
         possible_matches = []
         for _, est_row in match_df[match_df["Match Report"] == "❌ Missing in CDK"].iterrows():
@@ -237,5 +189,61 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             possible_matches_df = pd.DataFrame(possible_matches)
             st.subheader("🔍 Possible Matches Based on Qty & Price:")
             st.dataframe(possible_matches_df, use_container_width=True)
+            possible_match_lines = set(possible_matches_df["Estimate Line #"])
         else:
+            possible_match_lines = set()
             st.info("No possible matches found based on qty & price.")
+
+        # 📧 Estimator email
+        missing_estimate_lines = match_df[
+            (match_df["Match Report"] == "❌ Missing in Estimate") &
+            (~match_df["Description"].str.contains("RFC", case=False, na=False))
+        ]
+        missing_estimate_lines = missing_estimate_lines[~missing_estimate_lines["Estimate Line #"].isin(possible_match_lines)]
+
+        if not missing_estimate_lines.empty:
+            first_email = (
+                "Hey Deshunn can you look into these for me please they're billed out "
+                "and I want to see if they're supposed to be on the estimate:\n\n"
+            )
+            for _, row in missing_estimate_lines.iterrows():
+                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
+                first_email += f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
+            st.subheader("📩 Email for Estimator (Missing in Estimate):")
+            st.code(first_email, language="markdown")
+        else:
+            st.info("No 'Missing in Estimate' items found for estimator email.")
+
+        # 📧 Parts department email
+        second_email = ""
+        rfc_lines = match_df[
+            (match_df["Description"].str.contains("RFC", case=False, na=False)) &
+            (match_df["Match Report"] == "❌ Missing in Estimate")
+        ]
+        rfc_lines = rfc_lines[~rfc_lines["Estimate Line #"].isin(possible_match_lines)]
+
+        if not rfc_lines.empty:
+            second_email += "Can we get these taken off of the ticket please:\n\n"
+            for _, row in rfc_lines.iterrows():
+                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
+                qty_str = f"{row['CDK Quantity']}" if pd.notnull(row["CDK Quantity"]) else "N/A"
+                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str} | Qty: {qty_str}\n"
+
+        second_email += "\n\n\n"
+
+        missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
+        missing_cdk_lines = missing_cdk_lines[~missing_cdk_lines["Estimate Line #"].isin(possible_match_lines)]
+
+        if not missing_cdk_lines.empty:
+            second_email += (
+                "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
+            )
+            for _, row in missing_cdk_lines.iterrows():
+                price_str = f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A"
+                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
+
+        if second_email.strip() != "":
+            st.subheader("📩 Email for Parts Department (RFC + Missing in CDK):")
+            st.code(second_email, language="markdown")
+        else:
+            st.info("No RFC or 'Missing in CDK' items found for parts email.")
