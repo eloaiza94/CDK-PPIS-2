@@ -184,4 +184,59 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         # 📧 Parts department email
         second_email = ""
         rfc_lines = match_df[
-            (match_df["Description"].str.contains("RFC", case=Fa_
+            (match_df["Description"].str.contains("RFC", case=False, na=False)) &
+            (match_df["Match Report"] == "❌ Missing in Estimate")
+        ]
+        if not rfc_lines.empty:
+            second_email += "Can we get these taken off of the ticket please:\n\n"
+            for _, row in rfc_lines.iterrows():
+                price_str = f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A"
+                qty_str = f"{row['CDK Quantity']}" if pd.notnull(row["CDK Quantity"]) else "N/A"
+                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str} | Qty: {qty_str}\n"
+
+        second_email += "\n\n\n"
+
+        missing_cdk_lines = match_df[match_df["Match Report"] == "❌ Missing in CDK"]
+        if not missing_cdk_lines.empty:
+            second_email += (
+                "Also can you look into these for me and let me know if we forgot to bill them out please:\n\n"
+            )
+            for _, row in missing_cdk_lines.iterrows():
+                price_str = f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A"
+                second_email += f"- {row['Part Number']} | {row['Description']} | {price_str}\n"
+
+        if second_email.strip() != "":
+            st.subheader("📩 Email for Parts Department (RFC + Missing in CDK):")
+            st.code(second_email, language="markdown")
+        else:
+            st.info("No RFC or 'Missing in CDK' items found for parts email.")
+
+        # ✅ Create possible matches report: estimate lines missing in CDK but qty+price match
+        possible_matches = []
+        for _, est_row in match_df[match_df["Match Report"] == "❌ Missing in CDK"].iterrows():
+            est_qty = est_row["Estimate Quantity"]
+            est_price = est_row["Estimate Price"]
+
+            candidates = cdk_df[
+                (cdk_df["CDK Quantity"] == est_qty) &
+                (abs(cdk_df["CDK Price"] - est_price) < 0.01)
+            ]
+            for _, cdk_row in candidates.iterrows():
+                possible_matches.append({
+                    "Estimate Line #": est_row["Estimate Line #"],
+                    "Est Part #": est_row["Part Number"],
+                    "Est Qty": est_qty,
+                    "Est Price": est_price,
+                    "Est Description": est_row["Description"],
+                    "CDK Part #": cdk_row["Part Number"],
+                    "CDK Qty": cdk_row["CDK Quantity"],
+                    "CDK Price": cdk_row["CDK Price"],
+                    "CDK Description": cdk_row["CDK Description"]
+                })
+
+        if possible_matches:
+            possible_matches_df = pd.DataFrame(possible_matches)
+            st.subheader("🔍 Possible Matches Based on Qty & Price:")
+            st.dataframe(possible_matches_df, use_container_width=True)
+        else:
+            st.info("No possible matches found based on qty & price.")
