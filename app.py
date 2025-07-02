@@ -126,7 +126,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
                     "CDK Quantity": None,
                     "Estimate Price": est_price,
                     "CDK Price": None,
-                    "Match Report": "❌ Missing in CDK"
+                    "Match Report": "Missing in CDK"
                 })
 
         for _, cdk in cdk_df.iterrows():
@@ -141,18 +141,18 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
                     "CDK Quantity": cdk["CDK Quantity"],
                     "Estimate Price": None,
                     "CDK Price": cdk["CDK Price"],
-                    "Match Report": "❌ Missing in Estimate"
+                    "Match Report": "Missing in Estimate"
                 })
 
         match_df = pd.DataFrame(matches)
 
         def color_code_status(row):
             if row["Match Report"] == "Matched by Part #, Qty & Price":
-                return "✅ Perfect Match"
+                return "Perfect Match"
             elif "Missing" in row["Match Report"]:
-                return "❌ No Match"
+                return "No Match"
             else:
-                return "⚠️ Discrepancy"
+                return "Discrepancy"
 
         match_df["Color Coded Match Report"] = match_df.apply(color_code_status, axis=1)
 
@@ -162,7 +162,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         csv = match_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Report as CSV", csv, "match_report.csv", "text/csv")
 
-        # ✅ Create landscape PDF report
+        # ✅ Create landscape PDF report with safe text
         pdf = FPDF(orientation="L", unit="mm", format="A4")
         pdf.add_page()
         pdf.set_font("Helvetica", size=10)
@@ -173,7 +173,7 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
             "Estimate Line #", "Part Number", "Description", "Estimate Quantity",
             "CDK Quantity", "Estimate Price", "CDK Price", "Match Report", "Color Coded Match Report"
         ]
-        col_widths = [20, 30, 50, 25, 25, 30, 30, 50, 50]
+        col_widths = [18, 28, 45, 20, 20, 28, 28, 48, 48]  # adjusted widths for tighter fit
 
         for col_name, width in zip(columns, col_widths):
             pdf.cell(width, 8, col_name, border=1)
@@ -182,14 +182,17 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
         for _, row in match_df.iterrows():
             pdf.cell(col_widths[0], 8, str(row["Estimate Line #"]), border=1)
             pdf.cell(col_widths[1], 8, str(row["Part Number"]), border=1)
-            pdf.cell(col_widths[2], 8, str(row["Description"])[:30], border=1)
+            pdf.cell(col_widths[2], 8, str(row["Description"])[:25], border=1)
             pdf.cell(col_widths[3], 8, str(row["Estimate Quantity"]), border=1)
             pdf.cell(col_widths[4], 8, str(row["CDK Quantity"]), border=1)
             pdf.cell(col_widths[5], 8, f"${row['Estimate Price']:.2f}" if pd.notnull(row["Estimate Price"]) else "N/A", border=1)
             pdf.cell(col_widths[6], 8, f"${row['CDK Price']:.2f}" if pd.notnull(row["CDK Price"]) else "N/A", border=1)
-            pdf.cell(col_widths[7], 8, str(row["Match Report"])[:25], border=1)
-            color_text = re.sub(r"[^\x00-\x7F]", "", str(row["Color Coded Match Report"]))
-            pdf.cell(col_widths[8], 8, color_text[:25], border=1)
+            # Strip emojis from Match Report
+            match_report_safe = re.sub(r"[^\x00-\x7F]", "", str(row["Match Report"]))
+            pdf.cell(col_widths[7], 8, match_report_safe[:20], border=1)
+            # Strip emojis from Color Coded Match Report
+            color_text_safe = re.sub(r"[^\x00-\x7F]", "", str(row["Color Coded Match Report"]))
+            pdf.cell(col_widths[8], 8, color_text_safe[:20], border=1)
             pdf.ln()
 
         pdf_buffer = BytesIO()
