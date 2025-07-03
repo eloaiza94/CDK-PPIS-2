@@ -8,23 +8,13 @@ st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
-# 🎨 Neon cyberpunk CSS with Cyber Samurai Alley wallpaper on .stApp
+# 🎨 Neon cyberpunk CSS with working background
 st.markdown("""
 <style>
 .stApp {
     background: url('https://images.unsplash.com/photo-1580810736704-10f50c43e89e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
     background-size: cover;
     position: relative;
-}
-
-/* Optional dark overlay for readability */
-.stApp::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); /* adjust opacity for brightness */
-    z-index: -1;
 }
 
 h1, h2, h3, h4 {
@@ -39,9 +29,10 @@ h1, h2, h3, h4 {
     color: #e0e0e0;
 }
 
+/* Transparent containers for neon look */
 .stTextInput, .stTextArea, .stFileUploader {
     border-radius: 10px;
-    background-color: rgba(30, 30, 30, 0.8);
+    background-color: rgba(30, 30, 30, 0.6); /* semi-transparent */
     color: #00ffff;
     box-shadow: 0 0 20px rgba(0,255,255,0.5);
     transition: box-shadow 0.4s, transform 0.4s;
