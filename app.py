@@ -3,18 +3,19 @@ import pandas as pd
 
 st.set_page_config(page_title="Estimate vs CDK Cross-Reference", layout="wide")
 
-# 🔤 Orbitron font
+# 🔤 Add futuristic font
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
-# 🎨 Neon cyberpunk CSS with working background
+# 🎨 Apply sleek neon cyberpunk CSS theme
 st.markdown("""
 <style>
-.stApp {
-    background: url('https://images.unsplash.com/photo-1580810736704-10f50c43e89e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-    background-size: cover;
-    position: relative;
+body {
+    background-color: #000000;
+    background-image: radial-gradient(circle at top left, #0ff, transparent), radial-gradient(circle at bottom right, #f0f, transparent);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
 h1, h2, h3, h4 {
@@ -29,10 +30,9 @@ h1, h2, h3, h4 {
     color: #e0e0e0;
 }
 
-/* Transparent containers for neon look */
 .stTextInput, .stTextArea, .stFileUploader {
     border-radius: 10px;
-    background-color: rgba(30, 30, 30, 0.6); /* semi-transparent */
+    background-color: rgba(30, 30, 30, 0.8);
     color: #00ffff;
     box-shadow: 0 0 20px rgba(0,255,255,0.5);
     transition: box-shadow 0.4s, transform 0.4s;
@@ -61,7 +61,7 @@ h1, h2, h3, h4 {
 """, unsafe_allow_html=True)
 
 st.title("⚡ Estimate vs CDK Cross-Reference Tool ⚡")
-st.write("Upload your estimate Excel file and paste your CDK parts list below. Get a detailed match report instantly—cyberpunk style!")
+st.write("Upload your estimate Excel file and paste your CDK parts list below. Get a detailed match report instantly!")
 
 estimate_file = st.file_uploader("Upload Estimate Excel", type=["xlsx"])
 cdk_text = st.text_area("Paste CDK Parts List", height=300)
