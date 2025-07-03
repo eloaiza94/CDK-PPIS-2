@@ -3,26 +3,27 @@ import pandas as pd
 
 st.set_page_config(page_title="Estimate vs CDK Cross-Reference", layout="wide")
 
-# 🔤 Add Orbitron font for futuristic vibe
+# 🔤 Orbitron font
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
-# 🎨 Apply neon cyberpunk CSS with your Cyber Samurai Alley wallpaper
+# 🎨 Neon cyberpunk CSS with Cyber Samurai Alley wallpaper on .stApp
 st.markdown("""
 <style>
-body {
+.stApp {
     background: url('https://images.unsplash.com/photo-1580810736704-10f50c43e89e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
     background-size: cover;
+    position: relative;
 }
 
-/* optional dark overlay to improve text readability */
-body::before {
+/* Optional dark overlay for readability */
+.stApp::before {
     content: "";
-    position: fixed;
+    position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); /* adjust darkness if needed */
+    background: rgba(0, 0, 0, 0.6); /* adjust opacity for brightness */
     z-index: -1;
 }
 
