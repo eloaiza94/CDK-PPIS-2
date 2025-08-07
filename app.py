@@ -65,6 +65,15 @@ estimate_file = st.file_uploader("Upload Estimate Excel", type=["xlsx"])
 cdk_text = st.text_area("Paste CDK Parts List", height=300)
 
 if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
+    st.session_state.generated = True
+    st.session_state.estimate_file = estimate_file
+    st.session_state.cdk_text = cdk_text
+
+if st.session_state.get("generated") and st.session_state.get("estimate_file") and st.session_state.get("cdk_text"):
+
+    estimate_file = st.session_state.estimate_file
+    cdk_text = st.session_state.cdk_text
+
     with st.spinner("Processing..."):
 
         estimate_df = pd.read_excel(estimate_file)
