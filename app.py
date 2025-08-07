@@ -163,8 +163,18 @@ if st.button("Generate Match Report") and estimate_file and cdk_text.strip():
 
         match_df["Color Coded Match Report"] = match_df.apply(color_code_status, axis=1)
 
+        # Filter UI
+        filter_option = st.selectbox(
+            "Filter by Match Category:",
+            options=["All", "✅ Perfect Match", "🛠️ PPI Needed", "❌ No Match", "♻️ Core Return"]
+        )
+        if filter_option != "All":
+            filtered_df = match_df[match_df["Color Coded Match Report"] == filter_option]
+        else:
+            filtered_df = match_df
+
         st.success("Match Report Generated!")
-        st.dataframe(match_df, use_container_width=True)
+        st.dataframe(filtered_df, use_container_width=True)
 
         csv = match_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Report as CSV", csv, "match_report.csv", "text/csv")
